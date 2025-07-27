@@ -1,0 +1,1007 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Markdown 图片上传器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        /* 标签页导航 */
+        .tab-nav {
+            display: flex;
+            background: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 15px 20px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            color: #64748b;
+            transition: all 0.3s ease;
+            border-bottom: 3px solid transparent;
+        }
+
+        .tab-btn.active {
+            color: #667eea;
+            background: white;
+            border-bottom-color: #667eea;
+        }
+
+        .tab-btn:hover {
+            background: #f1f5f9;
+            color: #475569;
+        }
+
+        /* 标签页内容 */
+        .tab-content {
+            display: none;
+            padding: 40px;
+            min-height: 600px;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Markdown 处理页面样式 */
+        .markdown-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            min-height: 600px;
+        }
+
+        .input-section, .output-section {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .section-title {
+            font-size: 1.4rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #4a5568;
+        }
+
+        .textarea {
+            flex: 1;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 20px;
+            font-size: 14px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            resize: none;
+            outline: none;
+            transition: border-color 0.3s ease;
+            background: #f8fafc;
+        }
+
+        .textarea:focus {
+            border-color: #667eea;
+            background: white;
+        }
+
+        /* 本地上传页面样式 */
+        .upload-content {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .upload-area {
+            border: 3px dashed #cbd5e0;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 30px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .upload-area:hover, .upload-area.dragover {
+            border-color: #667eea;
+            background: #f0f4ff;
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            margin-bottom: 20px;
+            color: #9ca3af;
+        }
+
+        .upload-text {
+            font-size: 1.1rem;
+            color: #6b7280;
+            margin-bottom: 10px;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .upload-results {
+            margin-top: 30px;
+        }
+
+        .result-item {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 15px;
+        }
+
+        .result-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .result-image {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 8px;
+            margin-right: 15px;
+        }
+
+        .result-info h4 {
+            margin: 0;
+            color: #374151;
+        }
+
+        .result-info p {
+            margin: 5px 0 0 0;
+            color: #6b7280;
+            font-size: 0.9rem;
+        }
+
+        .result-outputs {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 15px;
+        }
+
+        .output-box {
+            background: white;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            padding: 12px;
+        }
+
+        .output-label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #4b5563;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+
+        .output-content {
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.85rem;
+            color: #1f2937;
+            word-break: break-all;
+            cursor: pointer;
+            padding: 8px;
+            background: #f9fafb;
+            border-radius: 4px;
+            transition: background 0.2s ease;
+        }
+
+        .output-content:hover {
+            background: #f3f4f6;
+        }
+
+        /* 控制台页面样式 */
+        .console-content {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        .console-container {
+            background: #1a1a1a;
+            border-radius: 10px;
+            padding: 20px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            color: #f8f8f8;
+            height: 500px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+        }
+
+        .console-output {
+            white-space: pre-wrap;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        .console-input-area {
+            display: flex;
+            gap: 10px;
+        }
+
+        .console-input {
+            flex: 1;
+            padding: 12px 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.3s ease;
+        }
+
+        .console-input:focus {
+            border-color: #667eea;
+        }
+
+        .console-send-btn {
+            padding: 12px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background 0.3s ease;
+        }
+
+        .console-send-btn:hover {
+            background: #5a67d8;
+        }
+
+        .console-send-btn:disabled {
+            background: #cbd5e0;
+            cursor: not-allowed;
+        }
+
+        /* 通用样式 */
+        .button-section {
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .process-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .process-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.6);
+        }
+
+        .process-btn:disabled {
+            background: #cbd5e0;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .status {
+            margin: 15px 0;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        .status.success {
+            background: #f0fff4;
+            color: #22543d;
+            border: 1px solid #9ae6b4;
+        }
+
+        .status.error {
+            background: #fed7d7;
+            color: #742a2a;
+            border: 1px solid #fc8181;
+        }
+
+        .status.processing {
+            background: #e6fffa;
+            color: #234e52;
+            border: 1px solid #81e6d9;
+        }
+
+        .copy-btn {
+            background: #48bb78;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            margin-top: 10px;
+            transition: background 0.3s ease;
+        }
+
+        .copy-btn:hover {
+            background: #38a169;
+        }
+
+        .examples {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f7fafc;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .examples h3 {
+            margin-bottom: 10px;
+            color: #4a5568;
+        }
+
+        .examples code {
+            background: #edf2f7;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+        }
+
+        .clear-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background 0.3s ease;
+        }
+
+        .clear-btn:hover {
+            background: #c82333;
+        }
+
+        .log-container {
+            background: #2d3748;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border: 1px solid #4a5568;
+        }
+
+        .log-header {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #a0aec0;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #4a5568;
+        }
+
+        .log-content {
+            font-size: 0.85rem;
+            color: #e2e8f0;
+            line-height: 1.4;
+            word-break: break-all;
+            white-space: pre-wrap;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+        }
+
+        @media (max-width: 768px) {
+            .markdown-content {
+                grid-template-columns: 1fr;
+                gap: 20px;
+                padding: 20px;
+            }
+            
+            .result-outputs {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            background: #48bb78;
+            color: white;
+            border-radius: 8px;
+            font-weight: 500;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+            z-index: 1000;
+        }
+
+        .toast.show {
+            transform: translateX(0);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 Markdown 图片上传器</h1>
+            <p>自动识别并上传 Markdown 文章中的图片到 Cloudflare R2</p>
+        </div>
+
+        <!-- 标签页导航 -->
+        <div class="tab-nav">
+            <button class="tab-btn active" onclick="switchTab('markdown')">📝 Markdown 处理</button>
+            <button class="tab-btn" onclick="switchTab('upload')">📤 本地上传</button>
+            <button class="tab-btn" onclick="switchTab('console')">🖥️ 控制台</button>
+        </div>
+
+        <!-- Markdown 处理标签页 -->
+        <div id="markdown-tab" class="tab-content active">
+            <div class="markdown-content">
+                <div class="input-section">
+                    <h2 class="section-title">📝 输入 Markdown 内容</h2>
+                    <textarea 
+                        id="markdownInput" 
+                        class="textarea" 
+                        placeholder="请粘贴你的 Markdown 内容...
+
+支持的图片格式：
+• Markdown 语法: ![alt text](image_url)
+• HTML 标签: <img src='image_url' width='50%' />
+• 超链接图片: <a href='...'><img src='...' /></a>
+
+例如：
+# 我的文章
+
+这是一张图片：
+![示例图片](https://example.com/image.jpg)
+
+还有一张：
+<img src='https://example.com/image2.jpg' width='300' />
+"></textarea>
+
+                    <div class="examples">
+                        <h3>💡 使用说明</h3>
+                        <p>• 支持 <code>![alt](url)</code> 和 <code>&lt;img&gt;</code> 标签</p>
+                        <p>• 自动保留图片的 width 属性</p>
+                        <p>• 批量处理所有图片并替换原链接</p>
+                        <p>• 自动去除超链接包装，只保留图片</p>
+                    </div>
+                </div>
+
+                <div class="output-section">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <h2 class="section-title">✨ 处理结果</h2>
+                        <button class="clear-btn" onclick="clearMarkdownLogs()">🗑️ 清空日志</button>
+                    </div>
+                    
+                    <!-- 处理日志区域 -->
+                    <div class="log-container" id="markdownLogs" style="margin-bottom: 15px;">
+                        <div class="log-header">📋 处理日志</div>
+                        <div class="log-content" id="markdownLogContent">等待处理...</div>
+                    </div>
+                    
+                    <textarea 
+                        id="outputText" 
+                        class="textarea" 
+                        placeholder="处理后的内容将显示在这里..." 
+                        readonly></textarea>
+                    
+                    <div class="button-section">
+                        <button class="copy-btn" id="copyBtn" onclick="copyToClipboard('outputText')" style="display: none;">
+                            📋 复制结果
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="button-section">
+                <button class="process-btn" id="processBtn" onclick="processMarkdown()">
+                    🔄 开始处理
+                </button>
+                
+                <div id="status" class="status" style="display: none;"></div>
+            </div>
+        </div>
+
+        <!-- 本地上传标签页 -->
+        <div id="upload-tab" class="tab-content">
+            <div class="upload-content">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 class="section-title">📤 本地图片上传</h2>
+                    <button class="clear-btn" onclick="clearUploadRecords()">🗑️ 清空记录</button>
+                </div>
+                
+                <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+                    <div class="upload-icon">📁</div>
+                    <div class="upload-text">点击选择文件或拖拽文件到此处</div>
+                    <div style="font-size: 0.9rem; color: #9ca3af;">支持 JPG, PNG, GIF, WebP 格式</div>
+                </div>
+                
+                <input type="file" id="fileInput" class="file-input" accept="image/*" multiple onchange="handleFileSelect(event)">
+                
+                <div id="uploadResults" class="upload-results"></div>
+            </div>
+        </div>
+
+        <!-- 控制台标签页 -->
+        <div id="console-tab" class="tab-content">
+            <div class="console-content">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 class="section-title">🖥️ 控制台交互</h2>
+                    <button class="clear-btn" onclick="clearConsole()">🗑️ 清空控制台</button>
+                </div>
+                
+                <div class="console-container">
+                    <div id="consoleOutput" class="console-output">欢迎使用图片上传控制台！
+输入图片URL或HTML标签进行上传处理
+支持的输入格式：
+• 图片URL: https://example.com/image.jpg
+• HTML img标签: &lt;img src="..." width="..." /&gt;
+• 包含超链接的图片: &lt;a href="..."&gt;&lt;img src="..." /&gt;&lt;/a&gt;
+
+输入 'help' 查看帮助，'clear' 清空控制台
+</div>
+                </div>
+                
+                <div class="console-input-area">
+                    <input type="text" id="consoleInput" class="console-input" 
+                           placeholder="输入图片URL或HTML标签..." 
+                           onkeypress="handleConsoleEnter(event)">
+                    <button class="console-send-btn" id="consoleSendBtn" onclick="processConsoleInput()">发送</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast 通知 -->
+    <div id="toast" class="toast"></div>
+
+    <script>
+        // 标签页切换
+        function switchTab(tabName) {
+            // 隐藏所有标签页内容
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // 移除所有标签按钮的active状态
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // 显示选中的标签页
+            document.getElementById(tabName + '-tab').classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        // 日志自动滚动到底部
+        function scrollLogToBottom() {
+            const logContent = document.getElementById('markdownLogContent');
+            logContent.scrollTop = logContent.scrollHeight;
+        }
+
+        // 添加日志内容
+        function addMarkdownLog(message) {
+            const logContent = document.getElementById('markdownLogContent');
+            logContent.textContent += message;
+            scrollLogToBottom();
+        }
+
+        // Markdown 处理功能
+        async function processMarkdown() {
+            const markdownInput = document.getElementById('markdownInput');
+            const outputText = document.getElementById('outputText');
+            const processBtn = document.getElementById('processBtn');
+            const status = document.getElementById('status');
+            const copyBtn = document.getElementById('copyBtn');
+            const markdownLogs = document.getElementById('markdownLogContent');
+
+            const markdown = markdownInput.value.trim();
+            
+            if (!markdown) {
+                showStatus('请输入 Markdown 内容！', 'error');
+                return;
+            }
+
+            // 显示处理状态
+            processBtn.disabled = true;
+            processBtn.innerHTML = '<span class="loading"></span>处理中...';
+            showStatus('正在处理图片，请稍候...', 'processing');
+            copyBtn.style.display = 'none';
+            
+            // 清空之前的日志并开始记录
+            markdownLogs.textContent = '🚀 开始处理 Markdown 内容...\n';
+            addMarkdownLog('📝 分析文本，查找图片链接...\n');
+            
+            // 简单分析输入中的图片数量
+            const imgMatches = markdown.match(/!\[[^\]]*\]\([^)]+\)|<img[^>]*>/g);
+            const imgCount = imgMatches ? imgMatches.length : 0;
+            addMarkdownLog(`🔍 发现 ${imgCount} 个图片链接\n`);
+            
+            if (imgCount === 0) {
+                addMarkdownLog('❌ 未发现需要处理的图片\n');
+                showStatus('未发现需要处理的图片', 'error');
+                processBtn.disabled = false;
+                processBtn.innerHTML = '🔄 开始处理';
+                return;
+            }
+            
+            addMarkdownLog('📤 开始批量上传处理...\n');
+            addMarkdownLog('⏳ 正在连接服务器...\n\n');
+
+            try {
+                const response = await fetch('/process', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ markdown: markdown })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    outputText.value = result.processed_text;
+                    showStatus(result.message, 'success');
+                    copyBtn.style.display = 'inline-block';
+                    
+                    // 详细的成功日志
+                    addMarkdownLog(`✅ 处理完成！\n`);
+                    addMarkdownLog(`📊 统计信息：\n`);
+                    addMarkdownLog(`   • 总共发现: ${result.total_count || imgCount} 个图片\n`);
+                    addMarkdownLog(`   • 成功处理: ${result.processed_count || 0} 个图片\n`);
+                    
+                    if (result.failed_images && result.failed_images.length > 0) {
+                        addMarkdownLog(`   • 失败图片: ${result.failed_images.length} 个\n`);
+                        addMarkdownLog(`❌ 失败的图片链接:\n`);
+                        result.failed_images.forEach((img, index) => {
+                            addMarkdownLog(`   ${index + 1}. ${img}\n`);
+                        });
+                    }
+                    
+                    addMarkdownLog(`\n🎉 ${result.message}\n`);
+                    addMarkdownLog(`📋 处理后的内容已显示在右侧文本框中，可以复制使用。\n`);
+                } else {
+                    showStatus(result.message, 'error');
+                    addMarkdownLog(`❌ 处理失败：${result.message}\n`);
+                }
+            } catch (error) {
+                showStatus('处理失败：' + error.message, 'error');
+                addMarkdownLog(`❌ 网络错误：${error.message}\n`);
+                addMarkdownLog(`💡 请检查网络连接或重试\n`);
+            } finally {
+                processBtn.disabled = false;
+                processBtn.innerHTML = '🔄 开始处理';
+            }
+        }
+
+        // 本地文件上传功能
+        function handleFileSelect(event) {
+            const files = event.target.files;
+            if (files.length > 0) {
+                Array.from(files).forEach(uploadFile);
+            }
+        }
+
+        async function uploadFile(file) {
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const resultsContainer = document.getElementById('uploadResults');
+            
+            // 创建结果项
+            const resultItem = document.createElement('div');
+            resultItem.className = 'result-item';
+            resultItem.innerHTML = `
+                <div class="result-header">
+                    <div style="width: 60px; height: 60px; background: #f3f4f6; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-right: 15px;">
+                        <span class="loading"></span>
+                    </div>
+                    <div class="result-info">
+                        <h4>${file.name}</h4>
+                        <p>正在上传...</p>
+                    </div>
+                </div>
+            `;
+            
+            resultsContainer.appendChild(resultItem);
+
+            try {
+                const response = await fetch('/upload_local', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    const url = result.url;
+                    resultItem.innerHTML = `
+                        <div class="result-header">
+                            <img src="${url}" class="result-image" alt="${file.name}">
+                            <div class="result-info">
+                                <h4>${file.name}</h4>
+                                <p>上传成功 ✅</p>
+                            </div>
+                        </div>
+                        <div class="result-outputs">
+                            <div class="output-box">
+                                <div class="output-label">URL</div>
+                                <div class="output-content" onclick="copyText('${url}')">${url}</div>
+                            </div>
+                            <div class="output-box">
+                                <div class="output-label">Markdown</div>
+                                <div class="output-content" onclick="copyText('![${file.name}](${url})')">![${file.name}](${url})</div>
+                            </div>
+                            <div class="output-box">
+                                <div class="output-label">HTML</div>
+                                <div class="output-content" onclick="copyText('&lt;img src=&quot;${url}&quot; alt=&quot;${file.name}&quot; /&gt;')">&lt;img src="${url}" alt="${file.name}" /&gt;</div>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    resultItem.innerHTML = `
+                        <div class="result-header">
+                            <div style="width: 60px; height: 60px; background: #fee2e2; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-right: 15px; color: #dc2626;">
+                                ❌
+                            </div>
+                            <div class="result-info">
+                                <h4>${file.name}</h4>
+                                <p style="color: #dc2626;">上传失败: ${result.message}</p>
+                            </div>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultItem.innerHTML = `
+                    <div class="result-header">
+                        <div style="width: 60px; height: 60px; background: #fee2e2; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-right: 15px; color: #dc2626;">
+                            ❌
+                        </div>
+                        <div class="result-info">
+                            <h4>${file.name}</h4>
+                            <p style="color: #dc2626;">上传失败: ${error.message}</p>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        // 控制台功能
+        function handleConsoleEnter(event) {
+            if (event.key === 'Enter') {
+                processConsoleInput();
+            }
+        }
+
+        async function processConsoleInput() {
+            const input = document.getElementById('consoleInput');
+            const output = document.getElementById('consoleOutput');
+            const sendBtn = document.getElementById('consoleSendBtn');
+            
+            const command = input.value.trim();
+            if (!command) return;
+
+            // 显示用户输入
+            output.textContent += `\n> ${command}\n`;
+            input.value = '';
+            
+            // 特殊命令处理
+            if (command.toLowerCase() === 'help') {
+                output.textContent += `可用命令：
+• help - 显示此帮助信息
+• clear - 清空控制台
+• 直接输入图片URL或HTML标签进行处理
+
+支持的输入格式：
+• https://example.com/image.jpg
+• <img src="..." width="..." />
+• <a href="..."><img src="..." /></a>
+\n`;
+                scrollConsoleToBottom();
+                return;
+            }
+            
+            if (command.toLowerCase() === 'clear') {
+                output.textContent = '控制台已清空\n';
+                return;
+            }
+
+            // 处理图片上传
+            sendBtn.disabled = true;
+            output.textContent += '正在处理...\n';
+            scrollConsoleToBottom();
+
+            try {
+                const response = await fetch('/console_process', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ input: command })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    output.textContent += `✅ 处理成功!\n${result.result}\n`;
+                } else {
+                    output.textContent += `❌ 处理失败: ${result.message}\n`;
+                }
+            } catch (error) {
+                output.textContent += `❌ 错误: ${error.message}\n`;
+            } finally {
+                sendBtn.disabled = false;
+                scrollConsoleToBottom();
+            }
+        }
+
+        function scrollConsoleToBottom() {
+            const container = document.querySelector('.console-container');
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // 通用功能
+        function showStatus(message, type) {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = `status ${type}`;
+            status.style.display = 'block';
+        }
+
+        function copyToClipboard(elementId) {
+            const element = document.getElementById(elementId);
+            element.select();
+            document.execCommand('copy');
+            showToast('已复制到剪贴板！');
+        }
+
+        function copyText(text) {
+            // 创建临时textarea来复制文本
+            const textarea = document.createElement('textarea');
+            textarea.value = text.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"');
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+            showToast('已复制到剪贴板！');
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 2000);
+        }
+
+        // 文件拖拽功能
+        function setupDragAndDrop() {
+            const uploadArea = document.querySelector('.upload-area');
+            
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.classList.add('dragover');
+            });
+            
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.classList.remove('dragover');
+            });
+            
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    Array.from(files).forEach(uploadFile);
+                }
+            });
+        }
+
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            setupDragAndDrop();
+            
+            // 允许 Tab 键在 textarea 中插入制表符
+            document.getElementById('markdownInput').addEventListener('keydown', function(e) {
+                if (e.key === 'Tab') {
+                    e.preventDefault();
+                    const start = this.selectionStart;
+                    const end = this.selectionEnd;
+                    this.value = this.value.substring(0, start) + '\t' + this.value.substring(end);
+                    this.selectionStart = this.selectionEnd = start + 1;
+                }
+            });
+        });
+
+        // 清空 Markdown 处理日志
+        function clearMarkdownLogs() {
+            document.getElementById('markdownLogContent').textContent = '等待处理...';
+        }
+
+        // 清空本地上传记录
+        function clearUploadRecords() {
+            document.getElementById('uploadResults').innerHTML = '';
+            showToast('本地上传记录已清空！');
+        }
+
+        // 清空控制台
+        function clearConsole() {
+            document.getElementById('consoleOutput').textContent = '欢迎使用图片上传控制台！\n输入图片URL或HTML标签进行上传处理\n支持的输入格式：\n• 图片URL: https://example.com/image.jpg\n• HTML img标签: &lt;img src="..." width="..." /&gt;\n• 包含超链接的图片: &lt;a href="..."&gt;&lt;img src="..." /&gt;&lt;/a&gt;\n\n输入 \'help\' 查看帮助，\'clear\' 清空控制台';
+            document.getElementById('consoleInput').value = '';
+            document.getElementById('consoleSendBtn').disabled = false;
+            showToast('控制台已清空！');
+        }
+    </script>
+</body>
+</html>
